@@ -1,0 +1,30 @@
+{
+    "name": "inbenta/api-signature-client",
+    "description": "Client for signing requests following Inbenta's API Signature Protocol",
+    "type": "library",
+    "require-dev": {
+        "guzzlehttp/psr7": "^1.5",
+        "phpunit/phpunit": "^4.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "Inbenta\\ApiSignature\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Inbenta\\ApiSignature\\Test\\": "test/src/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true
+    },
+    "scripts": {
+        "test": "bash ./test/test.sh ./src",
+        "coverage": "bash ./test/cover.sh ./src"
+    },
+    "require": {
+        "psr/http-message": "^1.0"
+    }
+}
