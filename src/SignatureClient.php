@@ -55,7 +55,7 @@ class SignatureClient
     public function __construct($apiBaseUrl, $signatureKey, $signatureVersion = '', $timestamp = 0)
     {
         $this->apiBaseUrl = parse_url($apiBaseUrl);
-        if (empty($this->apiBaseUrl) || empty($this->apiBaseUrl['host']) || empty($this->apiBaseUrl['path'])) {
+        if (empty($this->apiBaseUrl) || empty($this->apiBaseUrl['host'])) {
             throw new SignatureClientException("Invalid URL");
         }
         if (empty($signatureKey)) {
