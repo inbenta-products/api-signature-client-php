@@ -1,6 +1,6 @@
 <?php
 
-namespace Inbenta\ApiSignature\Test\PhpUnit;
+namespace Inbenta\ApiSignatureClientPhp\Test\PhpUnit;
 
 use PHPUnit\Framework\TestCase;
 use Inbenta\ApiSignature\SignatureClient;
@@ -153,11 +153,85 @@ class SignatureClientTest extends TestCase
 
     public function setUp()
     {
-        if (!file_exists(__DIR__.'/../api_config.php')) {
-            $this->markTestSkipped('Missing api_config.php file in /test directory. Create one first to run the test suite');
+        $this->API_BASE_URL = 'https://signature.example/test/v1';
+        if (file_exists(__DIR__.'/../api_config.php')) {
+            $config = include __DIR__.'/../api_config.php';
+            $this->API_BASE_URL = $config['API_BASE_URL'];
         }
-        $config = include __DIR__.'/../api_config.php';
-        $this->API_BASE_URL = $config['API_BASE_URL'];
+    }
+
+    public function testBaseStringIsUpdatedForEachRequestSign()
+    {
+        $testName = 'request-base-strings-of-same-signature-client-are-different';
+        // set credentials for this test
+        $signature_key = 'my-signature-key';
+        $signature_version = 'v1';
+        // create a client with the test credentials
+        $client = new SignatureClient(
+            $this->API_BASE_URL,
+            $signature_key,
+            $signature_version
+        );
+        // set two different fixtures to test baseString of requests
+        $test0 = $this->fixtures[0];
+        $timestamp0 = 1641381382;
+        $test1 = $this->fixtures[1];
+        $timestamp1 = 1641381396;
+        // get protected requestSigner property of SignatureClient and set class path to RequestSigner class
+        $requestSigner = $this->getPrivateProperty(get_class($client), 'requestSigner')->getValue($client);
+        $requestSignerClassPath = "Inbenta\\ApiSignature\\Signers\\$signature_version\\RequestSigner";
+        // this method generates internally a base string for the request signature
+        $client->generateRequestSignature(
+            $test0['request']['url'],
+            $test0['request']['body'],
+            'GET',
+            $timestamp0
+        );
+        // get base string for test0
+        $baseString0 = $this->getPrivateProperty($requestSignerClassPath, 'requestBaseString')->getValue($requestSigner);
+        // generate a new internal base string
+        $client->generateRequestSignature(
+            $test1['request']['url'],
+            $test1['request']['body'],
+            'GET',
+            $timestamp1
+        );
+        // get base string for test1
+        $baseString1 = $this->getPrivateProperty($requestSignerClassPath, 'requestBaseString')->getValue($requestSigner);
+        // check if the two base strings are different
+        $this->assertNotEquals($baseString0, $baseString1, "Error in test {$testName}:");
+    }
+
+    public function testBaseStringIsUpdatedForEachResponseSign()
+    {
+        $testName = 'response-base-strings-of-same-signature-client-are-different';
+        // set credentials for this test
+        $signature_key = 'my-signature-key';
+        $signature_version = 'v1';
+        // create a client with the test credentials
+        $client = new SignatureClient(
+            $this->API_BASE_URL,
+            $signature_key,
+            $signature_version
+        );
+        // set two different  fixtures to test baseString of responses
+        $test0 = $this->fixtures[0];
+        $timestamp0 = 1641381382;
+        $test1 = $this->fixtures[1];
+        $timestamp1 = 1641381396;
+        // get protected responseSigner property of SignatureClient and set class path to ResponseSigner class
+        $responseSigner = $this->getPrivateProperty(get_class($client), 'responseSigner')->getValue($client);
+        $responseSignerClassPath = "Inbenta\\ApiSignature\\Signers\\$signature_version\\ResponseSigner";
+        // this method generates internally a base string for the response signature
+        $client->validateResponseSignature($signature_key, $test0['response']['body']);
+        // get base string for test0
+        $baseString0 = $this->getPrivateProperty($responseSignerClassPath, 'responseBaseString')->getValue($responseSigner);
+        // generate a new internal base string
+        $client->validateResponseSignature($signature_key, $test1['response']['body']);
+        // get base string for test1
+        $baseString1 = $this->getPrivateProperty($responseSignerClassPath, 'responseBaseString')->getValue($responseSigner);
+        // check if the two base strings are different
+        $this->assertNotEquals($baseString0, $baseString1, "Error in test {$testName}:");
     }
 
     public function testGenerateRequestSignature()
@@ -296,4 +370,20 @@ class SignatureClientTest extends TestCase
         $request = new Request('GET', 'sample_url/sample_end_point');
         $request = $client->signRequest($request);
     }
+
+    /**
+    * getPrivateProperty
+    *
+    * @author	Joe Sexton <joe@webtipblog.com>
+    * @link    https://www.webtipblog.com/unit-testing-private-methods-and-properties-with-phpunit/
+    * @param 	string $className
+    * @param 	string $propertyName
+    * @return	ReflectionProperty
+    */
+    protected function getPrivateProperty($className, $propertyName) {
+		$reflector = new \ReflectionClass($className);
+		$property = $reflector->getProperty($propertyName);
+		$property->setAccessible(true);
+		return $property;
+	}
 }
